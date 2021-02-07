@@ -1,5 +1,6 @@
 import flowkit as fk
 from bokeh.plotting import show
+import pickle
 
 class Analysis():
 	plot_his = 1
@@ -22,24 +23,26 @@ class Analysis():
 		self.samples = {i:datafiles[i] for i in range(len(datafiles))} #id:filename
 		#importing all samples to session
 		for i in datafiles: self.session.add_samples(fk.Sample(filepath + i))
-		#creating dictionary for gating heiarchy and gates
-		self.gates = {}
+		#creating dictionary for gating heiarchy
 		self.gatingheiarchy = {}
 		return True
 
-	def addgate(self, gatename, parentgate = None):
+	def addgate(self, parent_x , parent_y, verticies,  gatename, parentgate = ''):
 		"""
-		The method addgate is responsible for creating gates, and saving them to the gatingheiarchy dictionary.
+		The method addgate is responsible for creating gates, and saving them to the gatingheiarchy dictionary. The only supported gate is polygon.
 
 		Input Parameteres:
+		- parent_x
+		- parent_y
+		- verticies
 		- gatename - string representing the name of the date (eg. CD3 High). There should be no duplicate gate names. 
-		- parentgate - Defaulted to None. String representing the parent gates of the new gate. 
+		- parentgate - Defaulted to ''. String representing the parent gates of the new gate. 
 
 		returns True if gate is added successfully and False if an error is encountered such as a duplicate gate.
 
 		Implemented gating heiarchy handling. Actually creating the gate on FlowKit is still yet to be implemented.
 		"""
-		if parentgate == None: 
+		if parentgate == '': 
 			#we need to first parse through 
 			self.gatingheiarchy[gatename] = {}
 		else:
@@ -60,6 +63,7 @@ class Analysis():
 							stack.append(process[i])
 			if a != False:
 				a[parentgate][gatename] = {}
+				#create flowkit gate
 				return True
 			else: 
 				return False
@@ -69,3 +73,33 @@ class Analysis():
 
 	def getgateheiarchy(self):
 		pass
+
+	def exportsession(self, filename = "save"):
+		"""
+		Saves all object data into a binary file with name defined by user (or defaulted to "save") with a .session file extension.
+
+		Input Parameteres:
+		- filename - String of file name in which all data will be saved to (excludes .session extension). Defaults to "save".
+
+		returns True if saving process is sucessful or returns False if filename is empty
+		"""
+		if len(filename) == 0: #filename cannot be empty
+			return False
+		with open(filename + ".session", 'wb'):
+			pickle.dump([self.session, self.filepath, self.samples, self.getgateheiarchy], f)
+		return True
+
+	def restoresession(self, filename = "save"):
+		"""
+		Loads object data from a previous saved session file. 
+
+		Input Parameteres:
+		- filename - String of file name in which all data will be loaded from (excludes .session extension). Defaults to "save".
+
+		returns True if loading process is sucessful or returns False if filename is empty
+		"""
+		if len(filename) == 0: #filename cannot be empty
+			return False
+		with open(filename + ".session", 'wb'):
+			self.session, self.filepath, self.samples, self.getgateheiarchy = pickle.load(f)
+		return True
