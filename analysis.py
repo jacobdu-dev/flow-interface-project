@@ -3,6 +3,10 @@ from bokeh.plotting import show
 import pickle
 
 class Analysis():
+	"""
+	The analysis class serves as the primary interface between the FlowKit library and the raw data/user inputs. 
+	Nearly all functions performed should go through an Analysis object.  
+	"""
 	plot_his = 1
 	plot_density = 2
 	def __init__(self):
