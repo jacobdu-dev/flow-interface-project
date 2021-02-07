@@ -36,6 +36,8 @@ class Analysis():
 		- parentgate - Defaulted to None. String representing the parent gates of the new gate. 
 
 		returns True if gate is added successfully and False if an error is encountered such as a duplicate gate.
+
+		Implemented gating heiarchy handling. Actually creating the gate on FlowKit is still yet to be implemented.
 		"""
 		if parentgate == None: 
 			#we need to first parse through 
@@ -46,9 +48,21 @@ class Analysis():
 			stack.append(self.gatingheiarchy)
 			a = False
 			while len(stack) != 0:
-				
-			
-		pass
+				process = stack.pop()
+				#Base case: the nested/entire dictionary is empty
+				if len(list(process.keys())) != 0:
+					if parentgate in list(process.keys()):
+						#we found the nested dictionary containing the parent gate
+						a = process
+						break
+					else:
+						for i in list(process.keys()):
+							stack.append(process[i])
+			if a != False:
+				a[parentgate][gatename] = {}
+				return True
+			else: 
+				return False
 
 	def generatefigure(self, type, log = True):
 		pass
