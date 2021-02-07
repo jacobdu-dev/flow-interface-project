@@ -5,11 +5,22 @@ import pickle
 class Analysis():
 	plot_his = 1
 	plot_density = 2
-	def __init__(self, filepath, datafiles):
+	def __init__(self):
 		"""
-		init is responsible for importing all sample data files and creating 
-		dictionaries and variables for tracking analysis progress. Init will also create
-		a flowkit session. 
+		init is responsible for creation of all variables/attributes within the object. 
+
+		returns True if function is completed without error. 
+		"""
+
+		self.session = None
+		self.filepath = ""
+		self.samples = {} #id:filename
+		self.gatingheiarchy = {}#dictionary for gating heiarchy
+		return True
+
+	def importdata(self, filepath, datafiles):
+		"""
+		importdata is responsible for importing all sample data files and initial population of object variables/attributes.
 
 		Input Paramters:
 		- filepaths - string of the directory containing sample data relative to current directory
@@ -17,15 +28,13 @@ class Analysis():
 
 		returns True if function is completed without error. 
 		"""
-
 		self.session = fk.session()#creating flowkit session
 		self.filepath = filepath #no use at the moment, just in case accessing of files is needed later on
 		self.samples = {i:datafiles[i] for i in range(len(datafiles))} #id:filename
 		#importing all samples to session
 		for i in datafiles: self.session.add_samples(fk.Sample(filepath + i))
-		#creating dictionary for gating heiarchy
-		self.gatingheiarchy = {}
 		return True
+
 
 	def addgate(self, parent_x , parent_y, verticies,  gatename, parentgate = ''):
 		"""
