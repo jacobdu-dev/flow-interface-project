@@ -6,26 +6,51 @@ class Analysis():
 	plot_density = 2
 	def __init__(self, filepath, datafiles):
 		"""
-		Init is responsible for importing all sample data files and creating 
+		init is responsible for importing all sample data files and creating 
 		dictionaries and variables for tracking analysis progress. Init will also create
 		a flowkit session. 
 
 		Input Paramters:
 		- filepaths - string of the directory containing sample data relative to current directory
 		- datafiles - list of strings of filenames of fsc files to be imported
+
+		returns True if function is completed without error. 
 		"""
+
 		self.session = fk.session()#creating flowkit session
 		self.filepath = filepath #no use at the moment, just in case accessing of files is needed later on
 		self.samples = {i:datafiles[i] for i in range(len(datafiles))} #id:filename
 		#importing all samples to session
 		for i in datafiles: self.session.add_samples(fk.Sample(filepath + i))
-		#creating dictionary for gating heiarchy 
+		#creating dictionary for gating heiarchy and gates
+		self.gates = {}
 		self.gatingheiarchy = {}
+		return True
 
-	def addgate(self):
+	def addgate(self, gatename, parentgate = None):
+		"""
+		The method addgate is responsible for creating gates, and saving them to the gatingheiarchy dictionary.
+
+		Input Parameteres:
+		- gatename - string representing the name of the date (eg. CD3 High). There should be no duplicate gate names. 
+		- parentgate - Defaulted to None. String representing the parent gates of the new gate. 
+
+		returns True if gate is added successfully and False if an error is encountered such as a duplicate gate.
+		"""
+		if parentgate == None: 
+			#we need to first parse through 
+			self.gatingheiarchy[gatename] = {}
+		else:
+			#a stack implementation of a recursive function that would find the parent gate in dictionaries
+			stack = []
+			stack.append(self.gatingheiarchy)
+			a = False
+			while len(stack) != 0:
+				
+			
 		pass
 
-	def generatefigure(self, type):
+	def generatefigure(self, type, log = True):
 		pass
 
 	def getgateheiarchy(self):
