@@ -85,34 +85,51 @@ class Analysis():
 		pass
 
 	def getgateheiarchy(self):
-		pass
-
-	def exportsession(self, filename = "save"):
 		"""
-		Saves all object data into a binary file with name defined by user (or defaulted to "save") with a .session file extension.
+		The getgateheiarchy class serves as a method for users of the program to view their gating heiarchy. 
+		The method is implemented to map out the structure of nested dictionaries (self.gateheiarchy) and return
+		a tree in the format of a string. There are no input perameters and returns the string that will be printed. 
+		Please note dictionaries are not ordered and therefore the values on the tree are not ordered either. Only the
+		heiarchy will be intact. 
+		"""
+		stack = []
+		returnstring = ""
+		for i, j in {"root": self.gateheiarchy}.items():
+			stack.append((0, i, j))
+			while len(stack) != 0:
+				lvl, key, val = stack.pop()
+				returnstring += "|" + lvl * "---" + str(key) + "\n" if lvl != 0 else lvl * "---" + str(key) + "\n"
+				for k, l in val.items():
+					stack.append((lvl + 1, k, l))
+		return returnstring
+
+
+	def exportsession(self, filename = "untitled"):
+		"""
+		Saves all object data into a binary file with name defined by user (or defaulted to "untitled") with a .session file extension.
 
 		Input Parameteres:
-		- filename - String of file name in which all data will be saved to (excludes .session extension). Defaults to "save".
+		- filename - String of file name in which all data will be saved to (excludes .session extension). Defaults to "untitled".
 
 		returns True if saving process is sucessful or returns False if filename is empty
 		"""
 		if len(filename) == 0: #filename cannot be empty
 			return False
 		with open(filename + ".session", 'wb'):
-			pickle.dump([self.session, self.filepath, self.samples, self.getgateheiarchy], f)
+			pickle.dump([self.session, self.filepath, self.samples, self.gateheiarchy], f)
 		return True
 
-	def restoresession(self, filename = "save"):
+	def restoresession(self, filename = "untitled"):
 		"""
 		Loads object data from a previous saved session file. 
 
 		Input Parameteres:
-		- filename - String of file name in which all data will be loaded from (excludes .session extension). Defaults to "save".
+		- filename - String of file name in which all data will be loaded from (excludes .session extension). Defaults to "untitled".
 
 		returns True if loading process is sucessful or returns False if filename is empty
 		"""
 		if len(filename) == 0: #filename cannot be empty
 			return False
 		with open(filename + ".session", 'wb'):
-			self.session, self.filepath, self.samples, self.getgateheiarchy = pickle.load(f)
+			self.session, self.filepath, self.samples, self.gateheiarchy = pickle.load(f)
 		return True
