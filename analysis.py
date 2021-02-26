@@ -1,42 +1,55 @@
 import flowkit as fk
 from bokeh.plotting import show
 import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 
 class Analysis():
 	"""
 	The analysis class serves as the primary interface between the FlowKit library and the raw data/user inputs. 
 	Nearly all functions performed should go through an Analysis object.  
 	"""
-	plot_his = 1
-	plot_density = 2
 	def __init__(self):
 		"""
 		init is responsible for creation of all variables/attributes within the object. 
 
 		returns True if function is completed without error. 
 		"""
-
 		self.session = None
 		self.filepath = ""
+		self.channels = None
 		self.samples = {} #id:filename
 		self.gatingheiarchy = {}#dictionary for gating heiarchy
-		return True
+		self.gateindicies = {}
 
-	def importdata(self, filepath, datafiles):
+	def importdata(self, filepath, datafiles, compensation):
 		"""
 		importdata is responsible for importing all sample data files and initial population of object variables/attributes.
 
 		Input Paramters:
 		- filepaths - string of the directory containing sample data relative to current directory
 		- datafiles - list of strings of filenames of fsc files to be imported
+		- compensation - string of filename (in same filepath) of the compensation matrix in csv format
 
 		returns True if function is completed without error. 
 		"""
-		self.session = fk.session()#creating flowkit session
+		self.session = fk.Session()#creating flowkit session
 		self.filepath = filepath #no use at the moment, just in case accessing of files is needed later on
-		self.samples = {i:datafiles[i] for i in range(len(datafiles))} #id:filename
+		self.samples = datafiles
 		#importing all samples to session
-		for i in datafiles: self.session.add_samples(fk.Sample(filepath + i))
+		self.channels = fk.Sample(filepath + datafiles[0]).channels
+		print(self.channels)
+		#get compensation matrix
+		#comp = np.genfromtxt(filepath + compensation, delimiter = ',')
+		#comp = np.nan_to_num(comp)
+		for i in datafiles: 
+			#apply compensation
+			sample = fk.Sample(filepath + i)
+			if sample.channels != self.channels:
+				print("Channels do not match, are these samples from the same experiment?")
+			#sample.apply_compensation(comp, comp_id="spill_comp")
+			self.session.add_samples(sample)
 		return True
 
 
@@ -75,14 +88,68 @@ class Analysis():
 						for i in list(process.keys()):
 							stack.append(process[i])
 			if a != False:
+				#parent gate must exist, if a == False, it doesnt
 				a[parentgate][gatename] = {}
 				#create flowkit gate
+				gate_indicies = [] # implement a function that gets sample indicies from gate
+				self.gateindicies[gatename] = gate_indicies
 				return True
 			else: 
 				return False
 
-	def generatefigure(self, type, log = True):
-		pass
+	def generatefigure(self, sample, x, y = "his", parent = "", logicle = True, left = 0, right = 270000):
+		"""if percentile == True:
+			raw = np.sort(self.session.get_sample(sample).get_raw_events())
+			events_to_remove = raw.size * 0.01 #removes 0.01% of events to remove noise
+			for i in range(int(events_to_remove / 2)): del raw[-1]
+			for i in range(int(events_to_remove / 2)): del raw[0]"""
+		#ensures channels exist
+		label_indicies = {self.channels[i]['PnN']:i for i in self.channels.keys()}
+		print(label_indicies)
+		if x not in label_indicies.keys(): return False
+		if y != "his" and y not in label_indicies.keys(): return False
+		#get dataframe of events
+		if logicle == True:
+			sample_instance = self.session.get_sample(sample)
+			sample_instance.apply_transform(fk.transforms.LogicleTransform('logicle_xform', param_t=300000, param_w=5, param_m=5, param_a=0))
+			sampledata = sample_instance.get_transformed_events()
+		else:
+			sample_instance = self.session.get_sample(sample)
+			sampledata = self.session.get_sample(sample).get_raw_events()
+		x_index = label_indicies[x]
+		y_index = None
+		if y != "his": y_index = sample_instance.get_channel_index(y)
+		#get gate events
+		if parent == "":
+			plotdata = sampledata[: , [int(x_index)]].flatten() if y_index is None else sampledata[: , [int(x_index), int(y_index)]]
+			del sampledata
+		else:
+			gate_indicies = [1, 2]
+			plotdata = sampledata[[[rows] for rows in gate_indicies], [int(x_index)].flatten() if y_index is None else [int(x_index), int(y_index)]]
+			del sampledata
+		#generate matplotlib plot
+		f, ax = plt.subplots()
+		if y == "his":
+			ax.hist(plotdata, bins = int((right - left) / 10))
+			ax.set_title("Histogram - " + x)
+			ax.set_xlabel(x)
+			ax.set_ylabel("Counts")
+			ax.set_xlim(left=left, right=right)
+			return ax
+		else:
+			print("starting", plotdata[:, 0].size, plotdata[:, 1].size)
+			xy = np.vstack([plotdata[:, 0], plotdata[:, 1]])
+			print("half")
+			density = gaussian_kde(xy)(xy)
+			print("generating plot")
+			ax.scatter(plotdata[:, 0], plotdata[:, 1], c=density, edgecolor='')
+			print("done")
+			ax.set_title(x + "vs." + y)
+			ax.set_xlabel(x)
+			ax.set_ylabel(y)
+			return ax
+
+
 
 	def getgateheiarchy(self):
 		"""
