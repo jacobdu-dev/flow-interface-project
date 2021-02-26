@@ -41,14 +41,14 @@ class Analysis():
 		self.channels = fk.Sample(filepath + datafiles[0]).channels
 		print(self.channels)
 		#get compensation matrix
-		#comp = np.genfromtxt(filepath + compensation, delimiter = ',')
-		#comp = np.nan_to_num(comp)
-		for i in datafiles: 
+		comp = np.genfromtxt(filepath + compensation, delimiter = ',')
+		comp = np.nan_to_num(comp)
+		for i in datafiles:
 			#apply compensation
 			sample = fk.Sample(filepath + i)
 			if sample.channels != self.channels:
 				print("Channels do not match, are these samples from the same experiment?")
-			#sample.apply_compensation(comp, comp_id="spill_comp")
+			sample.apply_compensation(comp, comp_id="spill_comp")
 			self.session.add_samples(sample)
 		return True
 
@@ -61,15 +61,15 @@ class Analysis():
 		- parent_x
 		- parent_y
 		- verticies
-		- gatename - string representing the name of the date (eg. CD3 High). There should be no duplicate gate names. 
-		- parentgate - Defaulted to ''. String representing the parent gates of the new gate. 
+		- gatename - string representing the name of the date (eg. CD3 High). There should be no duplicate gate names.
+		- parentgate - Defaulted to ''. String representing the parent gates of the new gate.
 
 		returns True if gate is added successfully and False if an error is encountered such as a duplicate gate.
 
 		Implemented gating heiarchy handling. Actually creating the gate on FlowKit is still yet to be implemented.
 		"""
-		if parentgate == '': 
-			#we need to first parse through 
+		if parentgate == '':
+			#we need to first parse through
 			self.gatingheiarchy[gatename] = {}
 		else:
 			#a stack implementation of a recursive function that would find the parent gate in dictionaries
@@ -94,7 +94,7 @@ class Analysis():
 				gate_indicies = [] # implement a function that gets sample indicies from gate
 				self.gateindicies[gatename] = gate_indicies
 				return True
-			else: 
+			else:
 				return False
 
 	def generatefigure(self, sample, x, y = "his", parent = "", logicle = True, left = 0, right = 270000):
@@ -108,18 +108,19 @@ class Analysis():
 		print(label_indicies)
 		if x not in label_indicies.keys(): return False
 		if y != "his" and y not in label_indicies.keys(): return False
-		#get dataframe of events
+		#get np array of events
 		if logicle == True:
 			sample_instance = self.session.get_sample(sample)
-			sample_instance.apply_transform(fk.transforms.LogicleTransform('logicle_xform', param_t=300000, param_w=5, param_m=5, param_a=0))
+			sample_instance.apply_transform(fk.transforms.LogicleTransform('logicle', param_t=262144, param_w=0.5, param_m=5, param_a=0))
 			sampledata = sample_instance.get_transformed_events()
 		else:
 			sample_instance = self.session.get_sample(sample)
-			sampledata = self.session.get_sample(sample).get_raw_events()
-		x_index = label_indicies[x]
+			sampledata = sample_instance.get_raw_events()
+		x_index = sample_instance.get_channel_index(x)
 		y_index = None
 		if y != "his": y_index = sample_instance.get_channel_index(y)
 		#get gate events
+
 		if parent == "":
 			plotdata = sampledata[: , [int(x_index)]].flatten() if y_index is None else sampledata[: , [int(x_index), int(y_index)]]
 			del sampledata
@@ -127,26 +128,32 @@ class Analysis():
 			gate_indicies = [1, 2]
 			plotdata = sampledata[[[rows] for rows in gate_indicies], [int(x_index)].flatten() if y_index is None else [int(x_index), int(y_index)]]
 			del sampledata
+		np.savetxt("foo.csv", plotdata, delimiter=",")
+		#to eliminate errors, we will replace NaNs with 0
+		plotdata = np.nan_to_num(plotdata)
 		#generate matplotlib plot
 		f, ax = plt.subplots()
 		if y == "his":
-			ax.hist(plotdata, bins = int((right - left) / 10))
+			ax.hist(plotdata, bins = int((right - left) / 500))
 			ax.set_title("Histogram - " + x)
 			ax.set_xlabel(x)
 			ax.set_ylabel("Counts")
 			ax.set_xlim(left=left, right=right)
 			return ax
 		else:
-			print("starting", plotdata[:, 0].size, plotdata[:, 1].size)
-			xy = np.vstack([plotdata[:, 0], plotdata[:, 1]])
-			print("half")
-			density = gaussian_kde(xy)(xy)
-			print("generating plot")
-			ax.scatter(plotdata[:, 0], plotdata[:, 1], c=density, edgecolor='')
-			print("done")
-			ax.set_title(x + "vs." + y)
+			#sorting the data point by density
+			den, loc_x, loc_y = np.histogram2d(plotdata[:, 0], plotdata[:, 1], bins=int((right - left) / 750))
+			z = np.array([den[np.argmax(a <= loc_x[1:]), np.argmax(b <= loc_y[1:])] for a, b in zip(plotdata[:, 0], plotdata[:, 1])])
+			idx = z.argsort()
+			x_plot, y_plot, z_plot = plotdata[:, 0][idx], plotdata[:, 1][idx], z[idx]
+			#generating plot
+			ax.scatter(x=x_plot, y=y_plot, s=1, c=z_plot, cmap=plt.cm.jet, marker=".")
+			ax.set_title(x + " vs. " + y)
 			ax.set_xlabel(x)
 			ax.set_ylabel(y)
+			if logicle != True: #Without logicle transformation, we may have outliers that scew the min and max values of the figure
+				ax.set_xlim(left, right)
+				ax.set_ylim(left, right)
 			return ax
 
 
