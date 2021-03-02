@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 from datetime import timedelta
+from gates import Gates
 
 
 class Analysis():
@@ -22,7 +23,7 @@ class Analysis():
         self.channels = None
         self.samples = {}  # name:{type:nparray}
         self.gating_heiarchy = {}  # dictionary for gating heiarchy
-        self.gate_indicies = {}
+        self.gates = {} #{gatename:instance of the gates class}
         self.label_indicies = {}
 
     def importdata(self, filepath, datafiles, compensation):
@@ -56,7 +57,7 @@ class Analysis():
         self.label_indicies = {self.channels[i]['PnN']: int(i) for i in self.channels.keys()}
         return True
 
-    def addgate(self, parent_x, parent_y, verticies, gatename, parentgate='', logicle=True):
+    def addgate(self, verticies, gatename, parent_x, parent_y = 'his', parentgate='', logicle=True):
         """
         The method addgate is responsible for creating gates, and saving them to the gatingheiarchy dictionary. The only supported gate is polygon.
 
@@ -75,6 +76,7 @@ class Analysis():
         if parentgate == '':
             # we need to first parse through
             self.gating_heiarchy[gatename] = {}
+            self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, parentgate, logicle)
         else:
             # a stack implementation of a recursive function that would find the parent gate in dictionaries
             stack = []
@@ -94,9 +96,7 @@ class Analysis():
             if not a:
                 # parent gate must exist, if a == False, it doesnt
                 a[parentgate][gatename] = {}
-                # create flowkit gate
-                gate_indicies = []  # implement a function that gets sample indicies from gate
-                self.gate_indicies[gatename] = gate_indicies
+                self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, parentgate, logicle)
                 return True
             else:
                 return False, "Parent gate does not exist"
