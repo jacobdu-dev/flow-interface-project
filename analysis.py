@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 from datetime import timedelta
 from gates import Gates
+from sample import Sample
 
 
 class Analysis():
@@ -20,11 +21,11 @@ class Analysis():
         returns True if function is completed without error. 
         """
         self.filepath = ""
-        self.channels = None
-        self.samples = {}  # name:{type:nparray}
+        #self.channels = None
+        self.samples = {}  # name:{type:instance of Sample class}
         self.gating_heiarchy = {}  # dictionary for gating heiarchy
         self.gates = {} #{gatename:instance of the gates class}
-        self.label_indicies = {}
+        #self.label_indicies = {}
 
     def importdata(self, filepath, datafiles, compensation):
         """
@@ -39,22 +40,18 @@ class Analysis():
         """
         self.filepath = filepath  # no use at the moment, just in case accessing of files is needed later on
         # importing all samples to session
-        self.channels = fk.Sample(filepath + datafiles[0]).channels
-        print(self.channels)
         # get compensation matrix
         comp = np.genfromtxt(filepath + compensation, delimiter=',')
         comp = np.nan_to_num(comp)  # elminate NaN values in compensation matrix
         for i in datafiles:
             # apply compensation
             sample = fk.Sample(filepath + i)
-            if sample.channels != self.channels:
-                return False, "Channels do not match, are these samples from the same experiment?"
             sample.apply_compensation(comp, comp_id="spill_comp")
             sample.apply_transform(
                 fk.transforms.LogicleTransform('logicle', param_t=262144, param_w=0.5, param_m=5, param_a=0))
-            self.samples[i] = {'raw': sample.get_raw_events(), 'xform': sample.get_transformed_events()}
+           	sample_label_indicies = {sample.channels[i]['PnN']: int(i) for i in sample.channels.keys()}
+            self.samples[i] = Sample(sample.channels, sample_label_indicies, sample.get_raw_events(), sample.get_comp_events(), sample.get_transformed_events())
             del sample
-        self.label_indicies = {self.channels[i]['PnN']: int(i) for i in self.channels.keys()}
         return True
 
     def addgate(self, verticies, gatename, parent_x, parent_y = 'his', parentgate='', logicle=True):
@@ -101,12 +98,12 @@ class Analysis():
             else:
                 return False, "Parent gate does not exist"
 
-    def generatefigure(self, sample, x, y="his", parent="", logicle=True, left=0, right=262144):
+    def generatefigure(self, sample_name, x, y="his", parent="", logicle=True, left=0, right=262144):
         """
         The method addgate is responsible for generating figures through mpl. 
 
         Input Parameteres:
-        - sample - string of filename of sample
+        - sample_name - string of filename of sample
         - x - String of marker represented on the x axis.
         - y - String of marker represented on the y axis or "his" for a histogram. Defaults to "his"
         - parent - string representing the name of the parent gate. Defaults to ""
@@ -119,27 +116,29 @@ class Analysis():
 
         Parent gate functionality still needs to be implemented.
         """
+        #Get sample object
+        sample = self.samples[sample]
         # Requested markers on figure must exist in the experiment
-        if x not in self.label_indicies.keys(): return False
-        if y != "his" and y not in self.label_indicies.keys(): return False
-        # get np array of events
-        sample_data = self.samples[sample]['xform'] if logicle == True else self.samples[sample]['raw']
-        x_index = self.label_indicies[x] - 1
-        y_index = None
-        if y != "his": y_index = self.label_indicies[y] - 1
-        # get gate events
-        if parent == "":
-            plt_data = sample_data[:, [int(x_index)]].flatten() if y_index is None else sample_data[:,
-                                                                                        [int(x_index), int(y_index)]]
-            del sample_data
+        if x not in sample.label_indicies.keys(): return False
+        if y != "his" and y not in sample.label_indicies.keys(): return False
+        # get events
+    	if logicle == True: 
+    		sample_data = sample.get_xform_data(x) if y == "his" else sample.get_xform_data(x, y)
+    	else:
+    		sample_data = sample.get_raw_data(x) if y == "his" else sample.get_raw_data(x, y)
+        if parent != "":
+            gate_indicies = self.gates[parent].get_indicies(sample_data)
+        	if logicle == True: 
+        		plt_data = sample.get_xform_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_xform_data(x, y, gate_indicies)
+        	else:
+        		plt_data = sample.get_raw_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_raw_data(x, y, gate_indicies)
+        	del sample_data
         else:
-            gate_indicies = [1, 2]
-            plt_data = sample_data[
-                [[rows] for rows in gate_indicies], [int(x_index)].flatten() if y_index is None else [int(x_index),
-                                                                                                      int(y_index)]]
-            del sample_data
+        	plt_data = sample_data
+        	del sample_data
         # to eliminate errors when generating figures, we will replace NaNs with 0
         plt_data = np.nan_to_num(plt_data)
+        print(plt_datas.hape)
         # generate matplotlib plot
         f, ax = plt.subplots()
         if y == "his":
