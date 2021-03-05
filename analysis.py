@@ -2,6 +2,7 @@ import flowkit as fk
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import colors
 from timeit import default_timer as timer
 from datetime import timedelta
 from gates import Gates
@@ -73,7 +74,7 @@ class Analysis():
         if parentgate == '':
             # we need to first parse through
             self.gating_heiarchy[gatename] = {}
-            self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, parentgate, logicle)
+            self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, None, logicle)
         else:
             # a stack implementation of a recursive function that would find the parent gate in dictionaries
             stack = []
@@ -93,7 +94,8 @@ class Analysis():
             if not a:
                 # parent gate must exist, if a == False, it doesnt
                 a[parentgate][gatename] = {}
-                self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, parentgate, logicle)
+                parent = self.gates[parentgate] if parentgate != '' else None
+                self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, parent, logicle)
                 return True
             else:
                 return False, "Parent gate does not exist"
@@ -122,26 +124,27 @@ class Analysis():
         if x not in sample.label_indicies.keys(): return False
         if y != "his" and y not in sample.label_indicies.keys(): return False
         # get events
-        if logicle == True:
-            sample_data = sample.get_xform_data(x) if y == "his" else sample.get_xform_data(x, y)
-        else:
-            sample_data = sample.get_raw_data(x) if y == "his" else sample.get_raw_data(x, y)
         if parent != "":
-            gate_indicies = self.gates[parent].get_indicies(sample_data)
-            if logicle == True:
+            gate_indicies = self.gates[parent].get_indicies(sample)
+            if logicle:
                 plt_data = sample.get_xform_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_xform_data(x, y, gate_indicies)
             else:
                 plt_data = sample.get_raw_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_raw_data(x, y, gate_indicies)
-            del sample_data
         else:
-            plt_data = sample_data
-            del sample_data
+            if logicle:
+                plt_data = sample.get_xform_data(x) if y == "his" else sample.get_xform_data(x, y)
+            else:
+                plt_data = sample.get_raw_data(x) if y == "his" else sample.get_raw_data(x, y)
         # to eliminate errors when generating figures, we will replace NaNs with 0
         plt_data = np.nan_to_num(plt_data)
+        print(plt_data.size)
+        plt_data = plt_data[plt_data[:, 0]>=0, :]
+        plt_data = plt_data[plt_data[:, 1] >= 0, :]
+        print(plt_data.size)
         # generate matplotlib plot
         f, ax = plt.subplots()
         if y == "his":
-            ax.hist(plt_data, bins=int((right - left) / 50))
+            ax.hist(plt_data, bins=plt_data.size.astype(int)/100)
             ax.set_title("Histogram - " + x + " - " + str(plt_data.size) + " events")
             ax.set_xlabel(x)
             ax.set_ylabel("Counts")
@@ -149,13 +152,7 @@ class Analysis():
             return ax
         else:
             # sorting the data point by density
-            den, loc_x, loc_y = np.histogram2d(plt_data[:, 0], plt_data[:, 1], bins=int((right - left) / 300))
-            z = np.array([den[np.argmax(a <= loc_x[1:]), np.argmax(b <= loc_y[1:])] for a, b in
-                          zip(plt_data[:, 0], plt_data[:, 1])])
-            idx = z.argsort()
-            x_plot, y_plot, z_plot = plt_data[:, 0][idx], plt_data[:, 1][idx], z[idx]
-            # generating plot
-            ax.scatter(x=x_plot, y=y_plot, s=1, c=z_plot, cmap=plt.cm.jet, marker=".")
+            ax.hist2d(plt_data[:, 0], plt_data[:, 1], bins=500, cmap = "jet", norm=colors.LogNorm())
             ax.set_title(x + " vs. " + y + " - " + str(int(plt_data.size / 2)) + " events")
             ax.set_xlabel(x)
             ax.set_ylabel(y)
