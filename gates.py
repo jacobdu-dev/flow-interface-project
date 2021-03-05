@@ -49,6 +49,7 @@ class Gates():
 		"""
 		
 
-		for m, b in self.lines:
-			if m > 0:
+		#for m, b in self.lines:
+		#	if m > 0:
+		pass
 

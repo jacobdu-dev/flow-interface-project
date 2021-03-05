@@ -2,7 +2,7 @@ import analysis as an
 import matplotlib.pyplot as plt
 import time
 
-filepath = "E:\\Flow\\flow-interface-project\\Testing\\data\\"
+filepath = "Testing\\data\\"
 files = ['Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs',
 		 'Specimen_001_BM3 Rag 850 Full Stain Thy_005.fcs',
 		 'Specimen_001_KALxBM3 846 Full Stain Thy_001.fcs',

@@ -49,7 +49,7 @@ class Analysis():
             sample.apply_compensation(comp, comp_id="spill_comp")
             sample.apply_transform(
                 fk.transforms.LogicleTransform('logicle', param_t=262144, param_w=0.5, param_m=5, param_a=0))
-           	sample_label_indicies = {sample.channels[i]['PnN']: int(i) for i in sample.channels.keys()}
+            sample_label_indicies = {sample.channels[i]['PnN']: int(i) for i in sample.channels.keys()}
             self.samples[i] = Sample(sample.channels, sample_label_indicies, sample.get_raw_events(), sample.get_comp_events(), sample.get_transformed_events())
             del sample
         return True
@@ -117,28 +117,27 @@ class Analysis():
         Parent gate functionality still needs to be implemented.
         """
         #Get sample object
-        sample = self.samples[sample]
+        sample = self.samples[sample_name]
         # Requested markers on figure must exist in the experiment
         if x not in sample.label_indicies.keys(): return False
         if y != "his" and y not in sample.label_indicies.keys(): return False
         # get events
-    	if logicle == True: 
-    		sample_data = sample.get_xform_data(x) if y == "his" else sample.get_xform_data(x, y)
-    	else:
-    		sample_data = sample.get_raw_data(x) if y == "his" else sample.get_raw_data(x, y)
+        if logicle == True:
+            sample_data = sample.get_xform_data(x) if y == "his" else sample.get_xform_data(x, y)
+        else:
+            sample_data = sample.get_raw_data(x) if y == "his" else sample.get_raw_data(x, y)
         if parent != "":
             gate_indicies = self.gates[parent].get_indicies(sample_data)
-        	if logicle == True: 
-        		plt_data = sample.get_xform_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_xform_data(x, y, gate_indicies)
-        	else:
-        		plt_data = sample.get_raw_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_raw_data(x, y, gate_indicies)
-        	del sample_data
+            if logicle == True:
+                plt_data = sample.get_xform_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_xform_data(x, y, gate_indicies)
+            else:
+                plt_data = sample.get_raw_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_raw_data(x, y, gate_indicies)
+            del sample_data
         else:
-        	plt_data = sample_data
-        	del sample_data
+            plt_data = sample_data
+            del sample_data
         # to eliminate errors when generating figures, we will replace NaNs with 0
         plt_data = np.nan_to_num(plt_data)
-        print(plt_datas.hape)
         # generate matplotlib plot
         f, ax = plt.subplots()
         if y == "his":
