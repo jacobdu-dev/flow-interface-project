@@ -1,11 +1,6 @@
 from math import tan, pi
 import matplotlib.pyplot as plt 
-verticeslist = [(1, 9), (1, 1), (7, 9), (7, 1)]
-# point1 = (3, 4)
-# point2 = (5,7)
-# point3 = (9,1)
-# point4 = (3,7)
-# n_sides = 4
+verticeslist = [(0,0), (2,7), (4,0), (2,4)]
 def is_ingate(point, vertices):
     result = False
     n = len(vertices)
@@ -24,7 +19,7 @@ def is_ingate(point, vertices):
                     result = not result
         p1x,p1y = p2x,p2y
     print(result)
-is_ingate((5,7), verticeslist)
-is_ingate((5,6), verticeslist)
-is_ingate((5,5), verticeslist)
-is_ingate((4,3), verticeslist)
+is_ingate((1,3), verticeslist)
+is_ingate((2,3), verticeslist)#no
+is_ingate((4,2), verticeslist)#no
+is_ingate((2,5), verticeslist)

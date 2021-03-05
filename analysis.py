@@ -141,7 +141,7 @@ class Analysis():
         # generate matplotlib plot
         f, ax = plt.subplots()
         if y == "his":
-            ax.hist(plt_data, bins=int((right - left) / 500))
+            ax.hist(plt_data, bins=int((right - left) / 50))
             ax.set_title("Histogram - " + x + " - " + str(plt_data.size) + " events")
             ax.set_xlabel(x)
             ax.set_ylabel("Counts")
@@ -149,7 +149,7 @@ class Analysis():
             return ax
         else:
             # sorting the data point by density
-            den, loc_x, loc_y = np.histogram2d(plt_data[:, 0], plt_data[:, 1], bins=int((right - left) / 750))
+            den, loc_x, loc_y = np.histogram2d(plt_data[:, 0], plt_data[:, 1], bins=int((right - left) / 300))
             z = np.array([den[np.argmax(a <= loc_x[1:]), np.argmax(b <= loc_y[1:])] for a, b in
                           zip(plt_data[:, 0], plt_data[:, 1])])
             idx = z.argsort()
