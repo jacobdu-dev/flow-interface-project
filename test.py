@@ -14,9 +14,10 @@ files = ['Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs',
 comp = "compensation_matrix.csv"
 session = an.Analysis()
 session.importdata(filepath, files, comp)
+print(session.samples['Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs'].channels)
 session.addgate([(0, 6800), (206000,210000), (258000, 208000), (18000, 3200)], 'Singlet', 'FSC-A', 'FSC-H', logicle = False)
 session.addgate([(19000,9000), (34000,25000), (222000, 40000), (225000, 27000), (177000, 8200)], 'Singlet', 'FSC-A', 'SSC-A', 'Singlet', logicle = False)
-ax = session.generatefigure('Specimen_001_KQxBM3 838 Full Stain Thy_006.fcs', 'Qdot 605-A', 'Pacific Blue-A', logicle = True)
+ax = session.generatefigure('Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs', 'Qdot 605-A', 'Pacific Blue-A', 'Singlet', logicle = True)
 ax = session.generatefigure('Specimen_001_KQxBM3 838 Full Stain Thy_006.fcs', 'FSC-A', 'SSC-A', logicle = False)
 plt.show()
 while True: time.sleep(5)

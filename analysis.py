@@ -3,8 +3,6 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from timeit import default_timer as timer
-from datetime import timedelta
 from gates import Gates
 from sample import Sample
 
@@ -129,26 +127,24 @@ class Analysis():
             if logicle:
                 plt_data = sample.get_xform_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_xform_data(x, y, gate_indicies)
             else:
-                plt_data = sample.get_raw_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_raw_data(x, y, gate_indicies)
+                plt_data = sample.get_comp_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_comp_data(x, y, gate_indicies)
         else:
             if logicle:
                 plt_data = sample.get_xform_data(x) if y == "his" else sample.get_xform_data(x, y)
             else:
-                plt_data = sample.get_raw_data(x) if y == "his" else sample.get_raw_data(x, y)
+                plt_data = sample.get_comp_data(x) if y == "his" else sample.get_comp_data(x, y)
         # to eliminate errors when generating figures, we will replace NaNs with 0
         plt_data = np.nan_to_num(plt_data)
-        print(plt_data.size)
         plt_data = plt_data[plt_data[:, 0]>=0, :]
-        plt_data = plt_data[plt_data[:, 1] >= 0, :]
-        print(plt_data.size)
+        if y != "his": plt_data = plt_data[plt_data[:, 1] >= 0, :]
         # generate matplotlib plot
         f, ax = plt.subplots()
         if y == "his":
-            ax.hist(plt_data, bins=plt_data.size.astype(int)/100)
+            ax.hist(plt_data, bins=150)
             ax.set_title("Histogram - " + x + " - " + str(plt_data.size) + " events")
             ax.set_xlabel(x)
             ax.set_ylabel("Counts")
-            ax.set_xlim(left=left, right=right)
+            if not logicle: ax.set_xlim(left, right)
             return ax
         else:
             # sorting the data point by density
@@ -180,6 +176,7 @@ class Analysis():
                     stack.append((lvl + 1, k, l))
         return returnstring
 
+#EXCLUDE SESSION SAVING FROM PROJECT
     def exportsession(self, filename="untitled"):
         """
         Saves all object data into a binary file with name defined by user (or defaulted to "untitled") with a .session file extension.

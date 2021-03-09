@@ -25,9 +25,9 @@ class Gates():
                 sample_data = sample.get_xform_data(self.x) if self.type == 'his' else sample.get_xform_data(self.x, self.y)
         else:
             if self.parent is not None:
-                sample_data = sample.get_raw_data(self.x, row_indicies = self.parent.get_indicies(sample)) if self.type == 'his' else sample.get_raw_data(self.x, self.y, self.parent.get_indicies(sample))
+                sample_data = sample.get_comp_data(self.x, row_indicies = self.parent.get_indicies(sample)) if self.type == 'his' else sample.get_comp_data(self.x, self.y, self.parent.get_indicies(sample))
             else:
-                sample_data = sample.get_raw_data(self.x) if self.type == 'his' else sample.get_raw_data(self.x, self.y)
+                sample_data = sample.get_comp_data(self.x) if self.type == 'his' else sample.get_comp_data(self.x, self.y)
         if self.type != 'his':
             gate_indicies = []
             print(sample_data)
