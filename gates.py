@@ -1,50 +1,64 @@
-import numpy as np
+from multiprocessing.dummy import Process
 
 class Gates():
     """
     This class is responsible for saving gate parameters and generating indicies of subset events
     given its parameters. 
     """
-    def __init__(self, name, verticies, x, y = 'his', parent = None, logicle=True):
+    def __init__(self, name, verticies, samples, x, y = 'his', parent = None, logicle=True):
         """
         Saving gate parameters. 
         """
         self.name = name
         self.x = x
         self.y = y
-        self.verticies = verticies #verticies will be [a, b] if y is 'his' else list of tuples representing points
+        self.verticies = verticies#verticies will be [a, b] if y is 'his' else list of tuples representing points
         self.type = y if y == 'his' else 'polygon'
         self.parent = parent
         self.transformation = logicle
+        self.indicies = {}
+        self.processes = {}
+        self.calculate(samples)
 
-    def get_indicies(self, sample):
+    def calculate(self, samples):
+        for samplename, sample in samples.items():
+            p = Process(target=self.cal_gate_indicies, args=(samplename, sample, ))
+            self.processes[samplename] = p
+            self.processes[samplename].start()
+
+    def get_gate_indicies(self, sample):
+        return self.indicies[sample.name]
+
+    def cal_gate_indicies(self, *args):
+        samplename = args[0]
+        sample = args[1]
+        gate_indicies = list(self.parent.get_gate_indicies(sample)) if self.parent != None else list(sample.all_ind)
         if self.transformation:
-            if self.parent is not None:
-                sample_data = sample.get_xform_data(self.x, row_indicies = self.parent.get_indicies(sample)) if self.type == 'his' else sample.get_xform_data(self.x, self.y, self.parent.get_indicies(sample))
+            if self.parent != None:
+                sample_data = sample.get_xform_data(self.x, row_indicies = gate_indicies) if self.type == 'his' else sample.get_xform_data(self.x, self.y, gate_indicies)
             else:
                 sample_data = sample.get_xform_data(self.x) if self.type == 'his' else sample.get_xform_data(self.x, self.y)
         else:
-            if self.parent is not None:
-                sample_data = sample.get_comp_data(self.x, row_indicies = self.parent.get_indicies(sample)) if self.type == 'his' else sample.get_comp_data(self.x, self.y, self.parent.get_indicies(sample))
+            if self.parent != None:
+                sample_data = sample.get_comp_data(self.x, row_indicies = gate_indicies) if self.type == 'his' else sample.get_comp_data(self.x, self.y, gate_indicies)
             else:
                 sample_data = sample.get_comp_data(self.x) if self.type == 'his' else sample.get_comp_data(self.x, self.y)
+        c = 0
         if self.type != 'his':
-            gate_indicies = []
-            print(sample_data)
             point_list = list(map(tuple, sample_data))
-            print(len(point_list))
             for i in range(len(point_list)):
                 x, y = point_list[i]
-                if self.is_ingate((x, y)):
-                    gate_indicies.append(i)
-            return gate_indicies
+                if not self.is_ingate((x, y)):
+                    del gate_indicies[i - c]
+                    c += 1
         else:
             sample_data = sample_data.tolist()
-            gate_indicies = []
             for i in range(len(sample_data)):
-                if sample_data[i] >= self.verticies[0] and sample_data[i] <= self.verticies[1]:
-                    gate_indicies.append(i)
-            return gate_indicies
+                if sample_data[i][0] <= self.verticies[0] or sample_data[i][0] >= self.verticies[1]:
+                    del gate_indicies[i - c]
+                    c += 1
+        self.indicies[samplename] = gate_indicies
+        return True
 
     def is_ingate(self, point):
         """

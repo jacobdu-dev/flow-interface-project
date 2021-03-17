@@ -1,15 +1,22 @@
 from analysis import Analysis
 import matplotlib.pyplot as plt
+import matplotlib
+from ast import literal_eval
+from multiprocessing import Process
+from time import time as timeit
 prompt = """
 Usage:
-gf - Generate Figure
-gc - Generate Gate
+gf - Generate Figure and/or Create Gate
 rg - Retrieve Gate Heiarchy
 rs - Retrieve Statistics
 q - Quit Program
 """
-
+def plot(*args):
+	f, ax = args
+	plt.show()
 def main():
+	start = timeit()
+	matplotlib.interactive(False)
 	flow = Analysis()
 	#Importing of data
 	while True:
@@ -37,7 +44,7 @@ def main():
 	while True:
 
 		print(prompt)
-		a = str(input("What would you like to do? (gf/gc/rg/rs) :"))
+		a = str(input("What would you like to do? (gf/rg/rs) :"))
 		if a == 'gf':
 			while True:
 				for i, smplename in sampleid.items():
@@ -85,7 +92,8 @@ def main():
 					print("Invalid input.")
 					continue
 				if len(flow.gates) > 0:
-					valgates = {i + 1 :flow.gates[i] for i in range(len(flow.gates))}
+					list_gatenames = list(flow.gates.keys())
+					valgates = {i + 1 :list_gatenames[i] for i in range(len(list_gatenames))}
 					print("Valid Parent Gate(s): ")
 					print("0 - None")
 					for i, parentgates in valgates.items():
@@ -95,21 +103,47 @@ def main():
 						print("Invalid input.")
 						continue
 					parent = "" if a == 0 else valgates[a]
-					ax = flow.generatefigure(samplename, x_label, y_label, parent, logicle)
+					f, ax = flow.generatefigure(samplename, x_label, y_label, parent, logicle)
 				else:
-					ax = flow.generatefigure(samplename, x_label, y_label, logicle = logicle)
-				plt.show()
+					parent = ""
+					f, ax = flow.generatefigure(samplename, x_label, y_label, logicle = logicle)
+				p = Process(target=plot, args=(f, ax))
+				p.start()
 				print()
-				#ask if user would like to create a gate off that figure
-
-
-
-		elif a == 'gc':
-			pass
+				while True:
+					a = str(input("Would you like to create a gate from this figure? (y/n)"))
+					if a == 'y':
+						gate_name = str(input("Please enter a unique name for the gate: "))
+						if y_label == 'his':
+							a = str(input("Please indicate the range of the gate you'd like to create in the format a;b (eg. '0.5;200'). (a;b/e): "))
+							if a == 'e': break
+							if ';' not in a:
+								print("Invalid input.")
+								continue
+							gate_vert = [float(i) for i in a.split(';')]
+						else:
+							a = str(input("Please indicate the verticies of the gate you'd like to create in the format (x,y);(x,y). (a;b/e): "))
+							if a == 'e': break
+							if ';' not in a:
+								print("Invalid input.")
+								continue
+							gate_vert = [literal_eval(pt) for pt in a.split(';')]
+						flow.addgate(gate_vert, gate_name, x_label, y_label, parent, logicle)
+						break
+					elif a == 'n':
+						break
+					else:
+						print("Invalid input.")
+						continue
+				print()
+				break
 		elif a == 'rg':
-			pass
+			print(flow.getgateheiarchy())
 		elif a == 'rs':
-			pass
+			a = str(input("Please type the filepath and filename of the export csv file (eg. path/export_data.csv):"))
+			flow.export_statistics(a)
+			end = timeit()
+			print(end - start)
 		elif a == 'q':
 			quit()
 		else:

@@ -1,4 +1,44 @@
 Testing/data/
-Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs;Specimen_001_BM3 Rag 850 Full Stain Thy_005.fcs;Specimen_001_KALxBM3 846 Full Stain Thy_001.fcs;Specimen_001_KALxBM3 847 Full Stain Thy_002.fcs;Specimen_001_KALxBM3 848 Full Stain Thy_003.fcs;Specimen_001_KQxBM3 838 Full Stain Thy_006.fcs;Specimen_001_KQxBM3 839 Full Stain Thy_007.fcs;Specimen_001_KQxBM3 840 Full Stain Thy_008.fcs
+Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs;Specimen_001_BM3 Rag 850 Full Stain Thy_005.fcs;Specimen_001_KALxBM3 846 Full Stain Thy_001.fcs;Specimen_001_KALxBM3 847 Full Stain Thy_002.fcs
 compensation_matrix.csv
 gf
+0
+1;2
+n
+y
+Singlet
+(100, 3000);(243000,240000);(260000,175000);(4000,500)
+gf
+0
+1;3
+n
+1
+y
+Thymocytes
+(87000,26000);(128000,45000);(163000,38000);(189000,6900);(133000,3500);(87000,5200)
+gf
+0
+17;15
+y
+2
+y
+CD8a+CD4+
+(0.6,0.6);(0.6,0.89);(0.9,0.9);(0.9,0.6)
+rs
+rip.csv
+gf
+0
+7
+y
+3
+y
+PD-1 High
+0.556;0.87
+gf
+0
+7
+y
+4
+n
+rs
+E:\\Flow\\flow-interface-project\\lol.csv

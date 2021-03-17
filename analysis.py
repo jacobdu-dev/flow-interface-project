@@ -3,8 +3,10 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
+import pandas as pd
 from gates import Gates
 from sample import Sample
+from timeit import timeit
 
 
 class Analysis():
@@ -24,7 +26,6 @@ class Analysis():
         self.samples = {}  # name:{type:instance of Sample class}
         self.gating_heiarchy = {}  # dictionary for gating heiarchy
         self.gates = {} #{gatename:instance of the gates class}
-        #self.label_indicies = {}
 
     def importdata(self, filepath, datafiles, compensation):
         """
@@ -49,7 +50,7 @@ class Analysis():
             sample.apply_transform(
                 fk.transforms.LogicleTransform('logicle', param_t=262144, param_w=0.5, param_m=5, param_a=0))
             sample_label_indicies = {sample.channels[i]['PnN']: int(i) for i in sample.channels.keys()}
-            self.samples[i] = Sample(sample.channels, sample_label_indicies, sample.get_raw_events(), sample.get_comp_events(), sample.get_transformed_events())
+            self.samples[i] = Sample(i, sample.channels, sample_label_indicies, sample.get_raw_events(), sample.get_comp_events(), sample.get_transformed_events())
             del sample
         return True
 
@@ -72,7 +73,7 @@ class Analysis():
         if parentgate == '':
             # we need to first parse through
             self.gating_heiarchy[gatename] = {}
-            self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, None, logicle)
+            self.gates[gatename] = Gates(gatename, verticies, self.samples, parent_x, parent_y, None, logicle)
         else:
             # a stack implementation of a recursive function that would find the parent gate in dictionaries
             stack = []
@@ -89,11 +90,17 @@ class Analysis():
                     else:
                         for i in list(process.keys()):
                             stack.append(process[i])
-            if not a:
+            if type(a) is dict:
+                while len(self.gates[parentgate].processes) != 0:
+                    for sample_name in list(self.gates[parentgate].processes.keys()):
+                        p = self.gates[parentgate].processes[sample_name]
+                        p.join()
+                        del self.gates[parentgate].processes[sample_name]
                 # parent gate must exist, if a == False, it doesnt
                 a[parentgate][gatename] = {}
                 parent = self.gates[parentgate] if parentgate != '' else None
-                self.gates[gatename] = Gates(gatename, verticies, parent_x, parent_y, parent, logicle)
+                print(parent, parentgate)
+                self.gates[gatename] = Gates(gatename, verticies, self.samples, parent_x, parent_y, parent, logicle)
                 return True
             else:
                 return False, "Parent gate does not exist"
@@ -123,7 +130,11 @@ class Analysis():
         if y != "his" and y not in sample.label_indicies.keys(): return False
         # get events
         if parent != "":
-            gate_indicies = self.gates[parent].get_indicies(sample)
+            while sample_name in self.gates[parent].processes:
+                p = self.gates[parent].processes[sample_name]
+                p.join()
+                del self.gates[parent].processes[sample_name]
+            gate_indicies = self.gates[parent].indicies[sample_name]
             if logicle:
                 plt_data = sample.get_xform_data(x, row_indicies=gate_indicies) if y == "his" else sample.get_xform_data(x, y, gate_indicies)
             else:
@@ -134,6 +145,7 @@ class Analysis():
             else:
                 plt_data = sample.get_comp_data(x) if y == "his" else sample.get_comp_data(x, y)
         # to eliminate errors when generating figures, we will replace NaNs with 0
+        counts = int(plt_data.size) if y == 'his' else int(plt_data.size / 2)
         plt_data = np.nan_to_num(plt_data)
         plt_data = plt_data[plt_data[:, 0]>=0, :]
         if y != "his": plt_data = plt_data[plt_data[:, 1] >= 0, :]
@@ -141,21 +153,24 @@ class Analysis():
         f, ax = plt.subplots()
         if y == "his":
             ax.hist(plt_data, bins=150)
-            ax.set_title("Histogram - " + x + " - " + str(plt_data.size) + " events")
+            ax.set_title("Histogram - " + x + " - " + str(counts) + " events")
             ax.set_xlabel(x)
             ax.set_ylabel("Counts")
             if not logicle: ax.set_xlim(left, right)
-            return ax
+            return f, ax
         else:
             # sorting the data point by density
             ax.hist2d(plt_data[:, 0], plt_data[:, 1], bins=500, cmap = "jet", norm=colors.LogNorm())
-            ax.set_title(x + " vs. " + y + " - " + str(int(plt_data.size / 2)) + " events")
+            ax.set_title(x + " vs. " + y + " - " + str(counts) + " events")
             ax.set_xlabel(x)
             ax.set_ylabel(y)
             if not logicle:  # Without logicle transformation, we may have outliers that scew the min and max values of the figure
                 ax.set_xlim(left, right)
                 ax.set_ylim(left, right)
-            return ax
+            else:
+                ax.set_xlim(0, 1)
+                ax.set_ylim(0, 1)
+            return f, ax
 
     def getgateheiarchy(self):
         """
@@ -167,7 +182,7 @@ class Analysis():
         """
         stack = []
         returnstring = ""
-        for i, j in {"root": self.gateheiarchy}.items():
+        for i, j in {"root": self.gating_heiarchy}.items():
             stack.append((0, i, j))
             while len(stack) != 0:
                 lvl, key, val = stack.pop()
@@ -175,6 +190,31 @@ class Analysis():
                 for k, l in val.items():
                     stack.append((lvl + 1, k, l))
         return returnstring
+    def export_statistics(self, filename, precision = 3):
+        sample_names = list(self.samples.keys())
+        export_data = {i + types:[] for i, j in self.gates.items() for types in [' Counts', ' Relative Parent Freq.']}
+        gate_names = [i for i, j in self.gates.items()]
+        export_data['Sample_Name'] = sample_names
+        for samp_name in sample_names:
+            for gate_name in gate_names:
+                parent_events = len(self.samples[samp_name].all_ind) if self.gates[gate_name].parent is None else len(self.gates[gate_name].parent.indicies[samp_name])
+                #get counts
+                while samp_name in self.gates[gate_name].processes:
+                    p = self.gates[gate_name].processes[samp_name]
+                    p.join()
+                    del self.gates[gate_name].processes[samp_name]
+                print(len(self.gates[gate_name].indicies[samp_name]))
+                sub_gate_events = len(self.gates[gate_name].indicies[samp_name])
+                export_data[gate_name + " Counts"].append(sub_gate_events)
+                #get relative parent freq
+                rel_freq = (sub_gate_events / parent_events) * 100
+                export_data[gate_name + " Relative Parent Freq."].append(round(rel_freq, precision))
+        df = pd.DataFrame(export_data)
+        df.set_index('Sample_Name', inplace = True)
+        df.to_csv(filename)
+        return True
+
+
 
 #EXCLUDE SESSION SAVING FROM PROJECT
     def exportsession(self, filename="untitled"):

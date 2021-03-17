@@ -1,11 +1,13 @@
 import numpy as np
 class Sample():
-	def __init__(self, channels, labels, raw, comp, xform):
+	def __init__(self, name, channels, labels, raw, comp, xform):
+		self.name = name
 		self.channels = channels
 		self.label_indicies = {i: j - 1 for i, j in labels.items()}
 		self.raw_data = raw
 		self.comp_data = comp
 		self.xform_data = xform
+		self.all_ind = [i for i in range(self.get_comp_data('FSC-A').size)]
 	def get_raw_data(self, x_label= None, y_label = None, row_indicies = None):
 		if x_label is None and y_label is None: 
 			return self.raw_data if row_indicies is None else self.raw_data[[[rows] for rows in row_indicies], :]

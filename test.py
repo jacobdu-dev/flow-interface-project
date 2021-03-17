@@ -1,6 +1,7 @@
-import analysis as an
+from timeit import default_timer as timer
+"""import analysis as an
 import matplotlib.pyplot as plt
-import time
+
 
 filepath = "Testing\\data\\"
 files = ['Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs',
@@ -20,4 +21,13 @@ session.addgate([(19000,9000), (34000,25000), (222000, 40000), (225000, 27000), 
 ax = session.generatefigure('Specimen_001_BM3 Rag 849 Full Stain Thy_004.fcs', 'Qdot 605-A', 'Pacific Blue-A', 'Singlet', logicle = True)
 ax = session.generatefigure('Specimen_001_KQxBM3 838 Full Stain Thy_006.fcs', 'FSC-A', 'SSC-A', logicle = False)
 plt.show()
-while True: time.sleep(5)
+while True: time.sleep(5)"""
+a = [i for i in range(700000)]
+gate_ind = [i for i in range(500000)]
+start = timer()
+counter = 0
+for i in gate_ind:
+	del a[i - counter]
+	counter += 1
+end = timer()
+print(end - start)
