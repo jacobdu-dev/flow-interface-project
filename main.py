@@ -31,6 +31,7 @@ def main():
 				print("Invalid flow cytometry data files.")
 				continue
 			files = a.split(';')
+			print(files)
 			a = str(input("Please specify file name of compensation matrix:\n"))
 			if 'csv' not in a:
 				print("Invalid flow cytometry data files.")
@@ -58,11 +59,11 @@ def main():
 				else:
 					samplename = sampleid[a]
 				channels = flow.samples[samplename].channels
-				labels = {channels[i]['PnN']: i for i in channels.keys()}
+				labels = {channels['pnn'][int(i)]: int(i) for i in channels['pnn'].keys()}
 				print("Valid Sample Makers:")
 				for marker, i in labels.items():
 					if (int(i) > 4) and (int(i) < len(channels)):
-						print("{} - {}({})".format(i, marker, channels[i]['PnS']))
+						print("{} - {}({})".format(i, marker, channels['pns'][i]))
 					else:
 						print("{} - {}".format(i, marker))
 				a = str(input("Please enter the markers to be shown on the x and y axis in the format 'x;y'. A histogram will be generated if only one ID is entered ({}-{};{}-{}/{}-{}/e) :".format(1, len(channels), 1, len(channels), 1, len(channels))))
@@ -79,8 +80,8 @@ def main():
 								if j not in "0123456789":
 									print("Invalid input.")
 									continue
-				x_label = channels[list_x_y[0]]['PnN']
-				y_label = channels[list_x_y[1]]['PnN'] if len(list_x_y) > 1 else "his"
+				x_label = channels['pnn'][int(list_x_y[0])]
+				y_label = channels['pnn'][int(list_x_y[1])] if len(list_x_y) > 1 else "his"
 				a = str(input("Would you like the figure to be shown on a logicle scale? (y/n/e) :"))
 				if a == 'y':
 					logicle = True
